@@ -1,9 +1,9 @@
 # Iron Arena — base de prototype 3D
 
-Jeu de combat original en JavaScript / Three.js. Objectif visuel : époque PlayStation / Tekken 3. **Cette version ne possède pas encore la qualité graphique ou les animations de Tekken 3.** Les personnages procéduraux articulés sont provisoires et doivent être remplacés par des modèles texturés et animés aboutis.
+Jeu de combat original en JavaScript / Three.js. Objectif visuel : époque PlayStation / Tekken 3. **Cette version ne possède pas encore la qualité graphique ou les animations de Tekken 3.** Les personnages utilisent désormais les modèles humains texturés et les animations squelettiques Quaternius (CC0). Voir ASSET-CREDITS.md.
 
 ## Inclus
-- Deux personnages 3D provisoires, arène de toit en 3D, éclairage et ombres.
+- Deux personnages humains Quaternius (Kaï et Aya), cheveux et textures embarqués, arène de toit en 3D, éclairage et ombres.
 - Solo contre IA (3 niveaux) et deux joueurs sur le même clavier.
 - Déplacement latéral et en profondeur, poings, pieds, garde, spécial chargé et combo poing-pied.
 - Deux manches gagnantes, chronomètre, pause et commandes tactiles.
@@ -22,6 +22,6 @@ J2 : flèches ; 1 = poing ; 2 = pied ; 3 = garde ; 0 = spécial. Échap = pause.
 ## État et limites
 La syntaxe et la logique des dégâts, de la garde et des manches ont été contrôlées. Le navigateur de validation a WebGL désactivé : le rendu 3D et ses performances n’ont pas pu être validés. Aucun multijoueur à distance n’est inclus ; le mode deux joueurs est local. Pas de manettes pour cette version.
 
-Pour atteindre l’objectif graphique : remplacer les corps procéduraux par des personnages avec maillage continu, UV et textures peintes ; intégrer des animations squelettiques de garde, locomotion, coups, réactions et chutes ; améliorer les transitions et le cadrage ; puis tester sur PC et mobile.
+Version 2 : modèles existants texturés, coiffures et animations importées (marche, coups de poing, garde, impacts et chute). Coup de pied procédural. Le rendu final reste à valider sur navigateur WebGL 2 ; les vérifications sans GPU contrôlent les modèles, leurs squelettes et les animations.
 
 Création originale : aucun personnage, modèle, animation, son ni logo de Tekken. Three.js est fourni sous licence MIT (THREE-LICENSE.txt).

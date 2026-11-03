@@ -24,7 +24,8 @@ jobs:
       - name: Prepare static files
         run: |
           mkdir _site
-          cp index.html style.css game.js scene.js three.module.js THREE-LICENSE.txt _site/
+          cp index.html style.css game.js scene.js three.module.js THREE-LICENSE.txt ASSET-CREDITS.md _site/
+          cp -r assets vendor _site/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site

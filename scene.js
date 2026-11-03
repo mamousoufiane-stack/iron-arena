@@ -1,6 +1,7 @@
 import * as THREE from './three.module.js';
+import {GLTFLoader} from './vendor/GLTFLoader.js';
 const canvas=document.getElementById('game');
-const renderer=new THREE.WebGLRenderer({canvas,antialias:false});renderer.setPixelRatio(1);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.setClearColor(0x18282d);
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true});renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.setClearColor(0x18282d);
 const scene=new THREE.Scene();scene.fog=new THREE.Fog(0x22383b,18,65);const camera=new THREE.PerspectiveCamera(37,16/9,.1,100);camera.position.set(0,4.5,12);
 scene.add(new THREE.HemisphereLight(0xc4e5e1,0x333421,2));const sun=new THREE.DirectionalLight(0xffe9b0,3);sun.position.set(-5,10,4);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);Object.assign(sun.shadow.camera,{left:-10,right:10,top:10,bottom:-10});sun.shadow.bias=-.002;scene.add(sun);const rim=new THREE.DirectionalLight(0x9ddfff,2);rim.position.set(4,5,-7);scene.add(rim);
 const mat=(c,extra={})=>new THREE.MeshStandardMaterial({color:c,roughness:.86,flatShading:true,...extra});
@@ -10,18 +11,66 @@ let floorTex=texture('floor','#596056','#333e37');floorTex.repeat.set(12,8);box(
 for(let i=0;i<48;i++){let x=(i%16)*3.3-25,h=2+(i*13%9),z=-12-Math.floor(i/16)*7;box(2.5,h,2.8,mat(i%2?0x2c4247:0x364f52),x,h/2-2,z);for(let j=0;j<h-1;j++)for(let k=0;k<3;k++)if((i+j+k)%3)box(.15,.3,.01,mat(0xaeb78b,{emissive:0x737950}),x-.8+k*.7,j-1,z+1.41);}
 const moon=new THREE.Mesh(new THREE.SphereGeometry(1.6,16,12),new THREE.MeshBasicMaterial({color:0xe5e0b5}));moon.position.set(17,13,-35);scene.add(moon);
 let decal=document.createElement('canvas');decal.width=512;decal.height=256;let dg=decal.getContext('2d');dg.strokeStyle='#d1e288';dg.lineWidth=4;dg.beginPath();dg.ellipse(256,128,238,115,0,0,7);dg.stroke();dg.fillStyle='#d1e288';dg.textAlign='center';dg.font='italic 900 62px Arial';dg.fillText('IRON ARENA',256,148);let dt=new THREE.CanvasTexture(decal);let dm=new THREE.Mesh(new THREE.PlaneGeometry(5,2.5),new THREE.MeshBasicMaterial({map:dt,transparent:true,opacity:.22,depthWrite:false}));dm.rotation.x=-Math.PI/2;dm.position.y=.004;scene.add(dm);
-function fighter(type){const root=new THREE.Group();scene.add(root);const skin=mat(type?0xd9b092:0xc19170),dark=mat(0x172024),cloth=mat(0xffffff,{map:texture('cloth',type?'#243a50':'#373d32',type?'#de6b40':'#c6e673')}),accent=mat(type?0xdd653c:0xc4e35b),hair=mat(type?0xcbb797:0x121919);const pieces={};
-function segment(name,r1,r2,len,m){const o=new THREE.Mesh(new THREE.CylinderGeometry(r1,r2,len,7,1),m);o.castShadow=true;root.add(o);pieces[name]={mesh:o,len};}
-segment('torso',.30,.23,.66,type?cloth:skin);segment('neck',.10,.12,.14,skin);for(let side of ['L','R']){segment(side+'thigh',.18,.145,.53,cloth);segment(side+'shin',.14,.105,.52,cloth);segment(side+'upper',.13,.105,.39,skin);segment(side+'fore',.105,.085,.36,skin);}
-let head=new THREE.Mesh(new THREE.SphereGeometry(.205,8,6),skin);head.scale.set(.85,1.16,.9);head.castShadow=true;root.add(head);pieces.head=head;
-let cap=new THREE.Mesh(new THREE.SphereGeometry(.21,8,4,0,Math.PI*2,0,Math.PI*.48),hair);cap.scale.set(.9,1.25,.95);head.add(cap);cap.position.y=.035;
-for(let i=0;i<5;i++){let spike=new THREE.Mesh(new THREE.ConeGeometry(.07,.16+(i%2)*.09,4),hair);spike.position.set((i-2)*.065,.2,-.02);spike.rotation.z=(2-i)*.2;head.add(spike);}
-for(let x of [-.074,.074]){box(.058,.025,.018,dark,x,.025,.169,head);box(.07,.018,.025,hair,x,.06,.164,head);}box(.045,.065,.06,skin,0,-.01,.177,head);box(.07,.015,.015,mat(0x614438),0,-.09,.161,head);
-const belt=box(.47,.10,.32,dark,0,1.07,0,root);box(.10,.085,.035,accent,0,0,.18,belt);
-for(let side of ['L','R']){pieces[side+'hand']=box(.18,.19,.20,dark,0,0,0,root);box(.19,.07,.21,accent,0,-.06,0,pieces[side+'hand']);pieces[side+'boot']=box(.22,.16,.36,dark,0,0,0,root);}
-if(!type){const band=box(.49,.11,.34,accent,0,1.39,0,root);pieces.band=band;}return{root,pieces};}
-const actors=[fighter(0),fighter(1)];const V=p=>new THREE.Vector3(...p),up=new THREE.Vector3(0,1,0);
-function segment(a,name,p,q){let {mesh,len}=a.pieces[name],v=V(q).sub(V(p));mesh.position.copy(V(p).add(V(q)).multiplyScalar(.5));mesh.quaternion.setFromUnitVectors(up,v.clone().normalize());mesh.scale.y=v.length()/len;}
-function pose(a,f,time){a.root.position.set(f.x,0,f.z*1.5);a.root.rotation.y=f.face*Math.PI/2;a.root.rotation.z=0;if(f.hp<=0){a.root.rotation.z=-f.face*Math.PI/2;a.root.position.y=.22;}let p=a.pieces,bob=Math.sin(time*5)*.025,atk=f.attack,t=atk?Math.sin(Math.min(1,atk.t/atk.duration)*Math.PI):0,kick=atk&&atk.type!=='punch',punch=atk?.type==='punch';const walk=Math.sin(f.walk)*.13,lean=f.stun?-.10:t*.10,hip=[0,1.06+bob,0],neck=[0,1.78+bob,lean];segment(a,'torso',hip,[0,1.71+bob,lean]);segment(a,'neck',[0,1.72+bob,lean],neck);p.head.position.set(0,1.98+bob,lean);for(let side of ['L','R']){let sign=side==='L'?-1:1,k=kick&&side==='R',ankle=k?[sign*.17,.11+t*1.25,.1+t*1.35]:[sign*.23,.10,sign*(.19+walk)],knee=k?[sign*.17,.60+t*.58,.1+t*.55]:[sign*.20,.59,sign*.15];segment(a,side+'thigh',[sign*.17,1.06+bob,0],knee);segment(a,side+'shin',knee,ankle);p[side+'boot'].position.copy(V(ankle).add(new THREE.Vector3(0,0,.08)));p[side+'boot'].rotation.x=k?-t:0;let isPunch=punch&&side==='R',elbow=[sign*.35,1.44+bob+(f.guard?.13:0),.20+lean+(isPunch?t*.3:0)],hand=[sign*.22,1.68+bob+(f.guard?.10:0),.38+lean+(isPunch?t*.72:0)];segment(a,side+'upper',[sign*.29,1.69+bob,lean],elbow);segment(a,side+'fore',elbow,hand);p[side+'hand'].position.copy(V(hand));}}
+const loader=new GLTFLoader();
+const characterFiles=['kai','aya'];
+const loaded=await Promise.all(characterFiles.map(name=>loader.loadAsync(new URL('./assets/'+name+'.glb',import.meta.url).href)));
+function dress(material,type){
+ const m=material.clone();m.roughness=.8;m.metalness=0;m.flatShading=false;
+ m.onBeforeCompile=shader=>{
+  shader.uniforms.kitColor={value:new THREE.Color(type?'#e77c52':'#c0dc62')};
+  shader.vertexShader='varying vec3 garmentPosition;\n'+shader.vertexShader;
+  shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\ngarmentPosition = position;');
+  shader.fragmentShader='varying vec3 garmentPosition; uniform vec3 kitColor;\n'+shader.fragmentShader;
+  shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>',`#include <map_fragment>
+   float h=garmentPosition.y; float ax=abs(garmentPosition.x);
+   bool pants=h<1.02; bool shirt=h>1.09 && h<1.47 && ax<0.255;
+   if(pants || shirt){
+    vec3 fabric=pants?vec3(0.055,0.073,0.09):kitColor;
+    if(pants && ax>0.12 && ax<0.15)fabric=kitColor;
+    if(h<0.16)fabric=vec3(0.035);
+    if(h>0.96 && h<1.02)fabric=kitColor*0.65;
+    float weave=0.94+0.06*sin(h*650.0)*sin(garmentPosition.x*650.0);
+    diffuseColor.rgb=fabric*weave;
+   }`);
+ };m.customProgramCacheKey=()=> 'fight-kit-'+type;return m;
+}
+const actors=loaded.map((gltf,type)=>{
+ const root=new THREE.Group();scene.add(root);root.add(gltf.scene);gltf.scene.updateMatrixWorld(true);
+ const bounds=new THREE.Box3().setFromObject(gltf.scene),height=bounds.max.y-bounds.min.y;
+ gltf.scene.scale.setScalar(2.15/height);gltf.scene.position.y=-bounds.min.y*(2.15/height);
+ gltf.scene.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;o.frustumCulled=false;if(o.material.name.includes('Superhero'))o.material=dress(o.material,type);else{o.material=o.material.clone();o.material.flatShading=false;}}});
+ const mixer=new THREE.AnimationMixer(gltf.scene);const actions={};for(const clip of gltf.animations){actions[clip.name]=mixer.clipAction(clip);}
+ const bones={};gltf.scene.traverse(o=>{if(o.isBone)bones[o.name]=o;});
+ return{root,model:gltf.scene,mixer,actions,bones,current:null,lastAttack:null,lastClock:0,previousX:0,previousZ:0,kickOffset:null};
+});
+function action(a,name,once=false,duration=0){
+ const next=a.actions[name];if(!next)return;
+ if(a.current===next)return;
+ const prev=a.current;next.reset();next.enabled=true;next.clampWhenFinished=once;next.setLoop(once?THREE.LoopOnce:THREE.LoopRepeat,once?1:Infinity);next.setEffectiveTimeScale(duration?next.getClip().duration/duration:1);next.setEffectiveWeight(1);next.play();if(prev)prev.crossFadeTo(next,.09,false);a.current=next;
+}
+function pose(a,f,time){
+ const delta=Math.max(0,Math.min(.05,time-a.lastClock));a.lastClock=time;
+ const moving=Math.abs(f.x-a.previousX)+Math.abs(f.z-a.previousZ)>.0001;a.previousX=f.x;a.previousZ=f.z;
+ a.root.position.set(f.x,0,f.z*1.5);a.root.rotation.y=f.face*Math.PI/2;
+ // Undo the previous procedural kick before the animation mixer evaluates this frame.
+ if(a.kickOffset){for(const [name,q] of Object.entries(a.kickOffset))a.bones[name]?.quaternion.copy(q);a.kickOffset=null;}
+ if(f.hp<=0)action(a,'Death01',true);
+ else if(f.attack){
+  if(f.attack!==a.lastAttack){a.lastAttack=f.attack;a.current?.fadeOut(.05);a.current=null;}
+  action(a,f.attack.type==='punch'?'Punch_Jab':f.attack.type==='special'?'Melee_Hook':'Idle_Shield_Loop',f.attack.type!=='kick',f.attack.type==='kick'?0:f.attack.duration);
+ }else if(f.stun>0)action(a,'Hit_Chest',true,.3);
+ else if(f.guard)action(a,'Idle_Shield_Loop');
+ else if(moving)action(a,'Walk_Loop');
+ else action(a,'Idle_Loop');
+ a.mixer.update(delta);
+ if(f.attack?.type==='kick'){
+  const t=f.attack.t/f.attack.duration;const lift=Math.sin(Math.min(1,t)*Math.PI);
+  a.kickOffset={};
+  for(const [name,angle] of [['thigh_r',-lift*1.4],['calf_r',lift*.24],['spine_01',lift*.16]]){
+   const bone=a.bones[name];if(!bone)continue;a.kickOffset[name]=bone.quaternion.clone();bone.rotateX(angle);
+  }
+ }
+}
 const sparks=[];for(let i=0;i<16;i++){let s=new THREE.Mesh(new THREE.OctahedronGeometry(.035),new THREE.MeshBasicMaterial({color:0xebff95}));s.visible=false;scene.add(s);sparks.push(s);}
-export function drawScene(fighters,time,effects,shake){const width=canvas.clientWidth,height=canvas.clientHeight;const w=Math.min(960,Math.round(width)),h=Math.round(w*height/width);if(canvas.width!==w||canvas.height!==h){renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}for(let i=0;i<2;i++){const f=fighters[i],a=actors[f.type];pose(a,f,time);}const center=(fighters[0].x+fighters[1].x)/2,dist=Math.abs(fighters[0].x-fighters[1].x);camera.position.lerp(new THREE.Vector3(center*.45,3.5,Math.max(9.4,dist*1.3)),.06);camera.lookAt(center*.6+(Math.random()-.5)*shake*.006,1.02,0);const effect=effects.at(-1);sparks.forEach((s,i)=>{s.visible=!!effect;if(effect){let a=i*Math.PI*2/16,r=(.3-effect.life)*4;s.position.set(effect.x+Math.cos(a)*r,effect.y+Math.sin(a)*r,effect.z*1.5+.2);s.material.color.set(effect.block?0xbbeeff:0xedff87);}});renderer.render(scene,camera);}
+let lastWidth=0,lastHeight=0;
+export function drawScene(fighters,time,effects,shake){const width=canvas.clientWidth,height=canvas.clientHeight;const w=Math.min(960,Math.round(width)),h=Math.round(w*height/width);if(lastWidth!==w||lastHeight!==h){lastWidth=w;lastHeight=h;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}for(let i=0;i<2;i++){const f=fighters[i],a=actors[f.type];pose(a,f,time);}const center=(fighters[0].x+fighters[1].x)/2,dist=Math.abs(fighters[0].x-fighters[1].x);camera.position.lerp(new THREE.Vector3(center*.45,3.5,Math.max(9.4,dist*1.3)),.06);camera.lookAt(center*.6+(Math.random()-.5)*shake*.006,1.02,0);const effect=effects.at(-1);sparks.forEach((s,i)=>{s.visible=!!effect;if(effect){let a=i*Math.PI*2/16,r=(.3-effect.life)*4;s.position.set(effect.x+Math.cos(a)*r,effect.y+Math.sin(a)*r,effect.z*1.5+.2);s.material.color.set(effect.block?0xbbeeff:0xedff87);}});renderer.render(scene,camera);}
