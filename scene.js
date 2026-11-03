@@ -41,7 +41,8 @@ const actors=loaded.map((gltf,type)=>{
  gltf.scene.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;o.frustumCulled=false;if(o.material.name.includes('Superhero'))o.material=dress(o.material,type);else{o.material=o.material.clone();o.material.flatShading=false;}}});
  const mixer=new THREE.AnimationMixer(gltf.scene);const actions={};for(const clip of gltf.animations){actions[clip.name]=mixer.clipAction(clip);}
  const bones={};gltf.scene.traverse(o=>{if(o.isBone)bones[o.name]=o;});
- return{root,model:gltf.scene,mixer,actions,bones,current:null,lastAttack:null,lastClock:0,previousX:0,previousZ:0,kickOffset:null};
+ const aura=new THREE.Mesh(new THREE.TorusGeometry(.72,.035,8,48),new THREE.MeshBasicMaterial({color:type?0xff8155:0xd4ff58,transparent:true,opacity:.8,depthWrite:false}));aura.visible=false;root.add(aura);
+ return{aura,root,model:gltf.scene,mixer,actions,bones,current:null,lastAttack:null,lastClock:0,previousX:0,previousZ:0,kickOffset:null};
 });
 function action(a,name,once=false,duration=0){
  const next=a.actions[name];if(!next)return;
@@ -51,19 +52,19 @@ function action(a,name,once=false,duration=0){
 function pose(a,f,time){
  const delta=Math.max(0,Math.min(.05,time-a.lastClock));a.lastClock=time;
  const moving=Math.abs(f.x-a.previousX)+Math.abs(f.z-a.previousZ)>.0001;a.previousX=f.x;a.previousZ=f.z;
- a.root.position.set(f.x,0,f.z*1.5);a.root.rotation.y=f.face*Math.PI/2;
+ a.root.position.set(f.x,0,f.z*1.5);a.root.rotation.y=f.face*Math.PI/2;const visual=f.attack?.visual;const progress=f.attack?Math.min(1,f.attack.t/f.attack.duration):0;a.aura.visible=!!visual;if(visual){a.aura.material.opacity=Math.sin(progress*Math.PI)*.85;a.aura.position.set(0,1.25,visual==='wave'?progress*3.3:.45);a.aura.scale.setScalar(visual==='wave'?.5+progress*1.5:1);a.aura.rotation.set(visual==='spin'?Math.PI/2:0,0,progress*6);if(visual==='spin')a.root.rotation.y+=progress*Math.PI*2;}
  // Undo the previous procedural kick before the animation mixer evaluates this frame.
  if(a.kickOffset){for(const [name,q] of Object.entries(a.kickOffset))a.bones[name]?.quaternion.copy(q);a.kickOffset=null;}
  if(f.hp<=0)action(a,'Death01',true);
  else if(f.attack){
   if(f.attack!==a.lastAttack){a.lastAttack=f.attack;a.current?.fadeOut(.05);a.current=null;}
-  action(a,f.attack.type==='punch'?'Punch_Jab':f.attack.type==='special'?'Melee_Hook':'Idle_Shield_Loop',f.attack.type!=='kick',f.attack.type==='kick'?0:f.attack.duration);
+  const kick=f.attack.type==='kick'||f.attack.visual==='spin';action(a,f.attack.clip||(f.attack.type==='punch'?'Punch_Jab':'Idle_Shield_Loop'),!kick&&f.attack.visual!=='rush',kick?0:f.attack.duration/(f.attack.visual==='rush'?3:1));
  }else if(f.stun>0)action(a,'Hit_Chest',true,.3);
  else if(f.guard)action(a,'Idle_Shield_Loop');
  else if(moving)action(a,'Walk_Loop');
  else action(a,'Idle_Loop');
  a.mixer.update(delta);
- if(f.attack?.type==='kick'){
+ if(f.attack?.type==='kick'||f.attack?.visual==='spin'){
   const t=f.attack.t/f.attack.duration;const lift=Math.sin(Math.min(1,t)*Math.PI);
   a.kickOffset={};
   for(const [name,angle] of [['thigh_r',-lift*1.4],['calf_r',lift*.24],['spine_01',lift*.16]]){

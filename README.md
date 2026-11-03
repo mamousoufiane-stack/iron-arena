@@ -25,3 +25,8 @@ La syntaxe et la logique des dégâts, de la garde et des manches ont été cont
 Version 2 : modèles existants texturés, coiffures et animations importées (marche, coups de poing, garde, impacts et chute). Coup de pied procédural. Le rendu final reste à valider sur navigateur WebGL 2 ; les vérifications sans GPU contrôlent les modèles, leurs squelettes et les animations.
 
 Création originale : aucun personnage, modèle, animation, son ni logo de Tekken. Three.js est fourni sous licence MIT (THREE-LICENSE.txt).
+
+## Version 3 — entraînement et techniques
+Mode entraînement sélectionnable au menu : adversaire fixe sans attaque ni garde, chronomètre infini, énergie illimitée, vie restaurée après 2 secondes sans impact. Touche R ou bouton Replacer pour réinitialiser positions et statistiques. Les touches du joueur 2 sont désactivées pour le mannequin.
+
+Kaï : I = Rafale éclair (50 énergie, avancée et 3 × 7 dégâts), O = Dragon ascendant (100 énergie, 34 dégâts). Aya : I = Spirale écarlate (50 énergie, 20 dégâts, zone élargie), O = Onde du phénix (100 énergie, 32 dégâts, portée de 3,8 unités). La garde réduit les dégâts et les esquives hors de la zone font manquer les techniques. Les techniques ne rechargent pas leur propre énergie. Joueur 2 : 0 et 9. Boutons tactiles inclus.
